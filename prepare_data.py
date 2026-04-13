@@ -1,0 +1,55 @@
+import os
+from datasets import load_dataset
+from transformers import BertTokenizer
+
+def prepare_datasets():
+    print("Initializing BERT tokenizer...")
+    tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+
+    # --- 1. IMDb Dataset ---
+    print("\nDownloading IMDb dataset...")
+    imdb = load_dataset("imdb")
+    os.makedirs("./data", exist_ok=True)
+    imdb.save_to_disk("./data/imdb")
+    print("IMDb dataset saved to ./data/imdb")
+
+    # --- 2. BookCorpus Dataset ---
+    print("\nDownloading BookCorpus dataset (Community Parquet Mirror)...")
+    # Using a pure parquet mirror to bypass Hugging Face's legacy script block
+    bookcorpus = load_dataset("Yuti/bookcorpus", split="train")
+    
+    print(f"Original BookCorpus size: {len(bookcorpus):,} examples")
+
+    # --- 3. Extract 10% Subset ---
+    print("Extracting 10% subset for scaled-down pre-training...")
+    subset_size = len(bookcorpus) // 10
+    bookcorpus_subset = bookcorpus.select(range(subset_size))
+    print(f"Subset size: {len(bookcorpus_subset):,} examples")
+
+    # --- 4. Tokenization ---
+    print("\nTokenizing the BookCorpus subset (this will take some time)...")
+    
+    def tokenize_function(examples):
+        return tokenizer(
+            examples["text"],
+            padding="max_length",
+            truncation=True,
+            max_length=128,
+            return_special_tokens_mask=True
+        )
+
+    # Use map() to tokenize in batches using multiple CPU cores
+    tokenized_bookcorpus = bookcorpus_subset.map(
+        tokenize_function,
+        batched=True,
+        num_proc=4,
+        remove_columns=bookcorpus_subset.column_names 
+    )
+
+    print("Saving tokenized BookCorpus subset to disk...")
+    tokenized_bookcorpus.save_to_disk("./data/bookcorpus_10pct")
+    print("BookCorpus subset saved to ./data/bookcorpus_10pct")
+    print("\nPhase 2 Complete. Data is ready for Pre-training.")
+
+if __name__ == "__main__":
+    prepare_datasets()
