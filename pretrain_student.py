@@ -59,7 +59,7 @@ class DistillationTrainer(Trainer):
 
         return (loss, student_outputs) if return_outputs else loss
 
-def setup_and_train():
+def setup_and_train(is_ablation=False):
     print("Loading tokenizer and datasets...")
     tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
     dataset = load_from_disk("./data/bookcorpus_10pct")
@@ -89,9 +89,9 @@ def setup_and_train():
         tokenizer=tokenizer, mlm=True, mlm_probability=0.15
     )
 
+    output_dir = "./distilbert-pretraining-ablation" if is_ablation else "./distilbert-pretraining"
     training_args = TrainingArguments(
-        output_dir="./distilbert-pretraining",
-        overwrite_output_dir=True,
+        output_dir=output_dir,
         num_train_epochs=1,
         per_device_train_batch_size=32,
         save_steps=10_000,
@@ -101,8 +101,13 @@ def setup_and_train():
     )
 
     print("Initializing Trainer...")
+    alpha_ce = 0.0 if is_ablation else 0.5
     trainer = DistillationTrainer(
         teacher_model=teacher_model,
+        temperature=2.0,
+        alpha_ce=alpha_ce,
+        alpha_mlm=0.2,
+        alpha_cos=0.3,
         model=student_model,
         args=training_args,
         data_collator=data_collator,
@@ -113,7 +118,12 @@ def setup_and_train():
     trainer.train()
     
     print("Saving fully pre-trained student model...")
-    trainer.save_model("./distilbert-student-pretrained")
+    save_path = "./distilbert-student-pretrained-ablation" if is_ablation else "./distilbert-student-pretrained"
+    trainer.save_model(save_path)
 
 if __name__ == "__main__":
-    setup_and_train()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ablation", action="store_true", help="Run ablation study without distillation loss")
+    args = parser.parse_args()
+    setup_and_train(is_ablation=args.ablation)
