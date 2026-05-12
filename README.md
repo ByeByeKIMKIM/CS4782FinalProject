@@ -25,12 +25,12 @@ The repository is structured according to the CS 4782 final deliverables guideli
 - **Model Architecture:** We initialized a 6-layer student model following the paper by extracting every alternate layer (0, 2, 4, 6, 8, 10) from the 12-layer `bert-base-uncased` teacher model. We also created an even smaller 3-layer student model using layers 0, 4, and 8 from the teacher to further explore the limits of knowledge distillation.
 - **Datasets:** We used the IMDb dataset for downstream evaluation. For pre-training, due to computational constraints, we trained on a scaled-down 10% subset of the BookCorpus dataset instead of the full Wikipedia + BookCorpus pipeline.
 - **Training Objective:** We implemented a custom Trainer utilizing the paper's specified Triple Loss: Masked Language Modeling Loss + Soft-label Cross-Entropy (KL Divergence) + Cosine Embedding Loss.
-- **Modifications:** We introduced an ablation flag to independently isolate and verify the effects of the distillation loss term.
+- **Modifications:** We introduced an ablation flag to independently isolate and verify the effects of the distillation loss term. In addition, we created a 3-Layer student model and compared its results with the teacher and the 6-layer student model using the IMDb dataset. 
 
 ## 5. Reproduction Steps
 **How someone can use this GitHub to re-implement our work:**
 
-1. **Environment Setup:** Ensure you have access to a CUDA-enabled GPU (e.g., Google Colab with an A100/V100).
+1. **Environment Setup:** Ensure you have access to a CUDA-enabled GPU (We used A100).
 2. **Install Dependencies:**
    ```bash
    pip install torch transformers datasets evaluate accelerate numpy
